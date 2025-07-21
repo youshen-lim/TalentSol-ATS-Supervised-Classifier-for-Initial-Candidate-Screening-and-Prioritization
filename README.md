@@ -20,11 +20,10 @@ The following preprocessing and feature engineering steps were performed on the 
 
 1.  **Data Loading:** The `job_applicant_dataset.csv` file was loaded into a pandas DataFrame.
 2.  **Identifier and Sensitive Feature Removal:** Columns like 'Job Applicant Name', 'Job Applicant ID', 'Age', and 'Gender' were removed early in the preprocessing pipeline. These columns contain **personally identifiable information (PII)** and were removed to mitigate risks of re-identification and ensure data privacy, aligning with responsible AI considerations. They were also not considered relevant or appropriate for the prioritization task in this version of the project, as the focus is on text matching between the resume/CV and the job description/job role.
-3.  **Categorical Feature Splitting:** The 'Race' column, containing multiple race values, was split into separate columns ('Race1' and 'Race2') to handle different race categories.
-4.  **Missing Value Handling:** Checked for and confirmed no missing data points were present after initial cleaning.
-5.  **Handling Class Imbalance:** The dataset had more candidates who were *not* a "Best Match" than those who were. To prevent the model from being biased towards the majority class, we used a technique called **oversampling** to create more examples of the minority class ("Best Match").
-6.  **Categorical Encoding:** Non-numerical categories like 'Ethnicity', 'Job Roles', 'Race1', and 'Race2' were converted into numerical representations using One-Hot Encoding.
-7.  **Text Feature Embedding:** This is where we convert the text from 'Job Description' and 'Resume' into numbers. We explored different methods:
+3.  **Handling Missing Values:** Checked for and confirmed no missing data points were present after initial cleaning.
+4.  **Handling Class Imbalance:** The dataset had more candidates who were *not* a "Best Match" than those who were. To prevent the model from being biased towards the majority class, we used a technique called **oversampling** to create more examples of the minority class ("Best Match").
+5.  **Categorical Encoding:** Non-numerical categories like 'Ethnicity' and 'Job Roles' were converted into numerical representations using One-Hot Encoding. The 'Race' column was split into 'Race1' and 'Race2' and then **both were dropped** to address potential racial bias and discrimination in the model. The 'Ethnicity' column was kept as a feature to support diversity hiring considerations.
+6.  **Text Feature Embedding:** This is where we convert the text from 'Job Description' and 'Resume' into numbers. We explored different methods:
     *   **TF-IDF Vectorization (Term Frequency-Inverse Document Frequency):** Calculates a score for each word based on its frequency within a document and its rarity across all documents. We also explored and optimized **n-grams** (sequences of words) to capture phrase meaning, finding that bigrams (1,2) improved performance.
     *   **Word2Vec Embeddings:** Learns dense numerical vector representations for words, capturing semantic relationships. Document vectors were created by averaging word vectors.
     *   **Hybrid Embeddings:** Combinations of TF-IDF and Word2Vec features were created to leverage the strengths of both approaches. An optimized hybrid approach used TF-IDF with tuned n-grams and Word2Vec.
@@ -42,7 +41,7 @@ We explored and tuned the following six model configurations:
 3.  **Logistic Regression with Tuned, N-gram Optimized TF-IDF:** Tuned the `ngram_range` for the TF-IDF vectorizers (exploring (1,1), (1,2), (1,3)) while using the best `C` and `penalty` found in the initial Tuned TF-IDF model tuning.
 4.  **Logistic Regression with Hybrid Embeddings (Default TF-IDF + Word2Vec):** Combined default TF-IDF (ngram\_range=(1,1)) and Word2Vec features, then tuned `C` and `penalty` for the Logistic Regression model on this combined feature set.
 5.  **Logistic Regression with Optimized Hybrid Embeddings (Optimized TF-IDF + Word2Vec):** Combined optimized TF-IDF (using the tuned `ngram_range` from configuration 3) and Word2Vec features, then tuned `C` and `penalty` for the Logistic Regression model on this combined feature set.
-6.  **Weighted Hybrid Model (Tuned TF-IDF + Tuned, N-gram Optimized TF-IDF):** This is a simple ensemble model. Instead of training a single Logistic Regression model on a combined feature set, it averages the predicted probabilities from the separately trained Tuned TF-IDF model (configuration 1) and the Tuned, N-gram Optimized TF-IDF model (configuration 3). The decision threshold for this averaged probability was then optimized.
+6.  **Weighted Hybrid Model (TF-IDF + Optimized TF-IDF):** This is a simple ensemble model. Instead of training a single Logistic Regression model on a combined feature set, it averages the predicted probabilities from the separately trained Tuned TF-IDF model (configuration 1) and the Tuned, N-gram Optimized TF-IDF model (configuration 3). The decision threshold for this averaged probability was then optimized.
 
 The models were primarily evaluated based on standard metrics (Accuracy, Precision, Recall, F1-score, ROC AUC). Crucially, **Precision-Recall curves** were analyzed for each model's predicted probabilities, and **decision thresholds were optimized to achieve a target recall level** (approximately 70%). This optimization aligns the model's decision-making with the project's goal of prioritizing candidates and minimizing false negatives. Confusion matrices were visualized at these optimized thresholds to understand the specific performance trade-offs in terms of true positives, false positives, true negatives, and false negatives.
 
@@ -58,12 +57,12 @@ Responsible AI considerations were incorporated by removing sensitive demographi
 
 The models were evaluated at decision thresholds optimized to achieve approximately 70% recall. The key results are summarized below:
 
-*   **Tuned TF-IDF Model:** Precision ~0.62, Recall ~0.70, F1-score ~0.66, ROC AUC ~0.69.
-*   **Tuned Word2Vec Model:** Precision ~0.54, Recall ~0.70, F1-score ~0.61, ROC AUC ~0.58.
-*   **Hybrid Model (Default TF-IDF + Word2Vec):** Precision ~0.63, Recall ~0.70, F1-score ~0.66, ROC AUC ~0.70.
-*   **Optimized TF-IDF Model (Tuned N-grams):** Precision ~0.66, Recall ~0.70, F1-score ~0.68, ROC AUC ~0.73.
-*   **Optimized Hybrid Model (Optimized TF-IDF + Word2Vec):** Precision ~0.67, Recall ~0.70, F1-score ~0.68, ROC AUC ~0.75.
-*   **Weighted Hybrid Model (TF-IDF + Optimized TF-IDF):** Precision ~0.55, Recall ~0.70, F1-score ~0.62, ROC AUC ~0.59.
+*   **Tuned TF-IDF Model:** Precision: 0.6205, Recall: 0.7006, F1-score: 0.6581, ROC AUC: 0.6866.
+*   **Tuned Word2Vec Model:** Precision: 0.5550, Recall: 0.7000, F1-score: 0.6191, ROC AUC: 0.6039.
+*   **Hybrid Model (Default TF-IDF + Word2Vec):** Precision: 0.6286, Recall: 0.7000, F1-score: 0.6624, ROC AUC: 0.7002.
+*   **Optimized TF-IDF Model (Tuned N-grams):** Precision: 0.6627, Recall: 0.7000, F1-score: 0.6808, ROC AUC: 0.7345.
+*   **Optimized Hybrid Model (Optimized TF-IDF + Word2Vec):** Precision: 0.6670, Recall: 0.7002, F1-score: 0.6832, ROC AUC: 0.7450.
+*   **Weighted Hybrid Model (TF-IDF + Optimized TF-IDF):** Precision: 0.5528, Recall: 0.7000, F1-score: 0.6178, ROC AUC: 0.5936.
 
 The **Optimized TF-IDF Model (Tuned N-grams)** and the **Optimized Hybrid Model (Optimized TF-IDF + Word2Vec)** consistently showed the best performance at the target recall, achieving the highest precision, F1-scores, and ROC AUCs. The Weighted Hybrid model did not outperform the individual optimized models.
 
@@ -76,18 +75,21 @@ The following artifacts from the modeling process have been saved:
 *   `upsampled_training_data.csv`: The final upsampled and preprocessed dataset used for training.
 *   `optimized_tfidf_logistic_regression_pipeline.joblib`: The trained scikit-learn Pipeline object for the **Optimized TF-IDF Model (Tuned N-grams)**. This pipeline includes the preprocessor (with optimized TF-IDF vectorizers and OneHotEncoder), the scaler, and the Logistic Regression model. This is the recommended artifact for making predictions on new data.
 
-## Inference and Integration
+## Inference
 
-To use the trained model for predicting on new job applicants and integrating into a system:
+For detailed information on how to use the saved model pipeline for making predictions on new data, including understanding the prediction logic and using the standalone `predict.py` script, please refer to **Section 7: Prediction Logic and Script for Inference** within the main notebook (`TalentSol_ATS_ML_Project.ipynb`).
 
-1.  **Load the Trained Pipeline:** Load the `optimized_tfidf_logistic_regression_pipeline.joblib` file using `joblib.load()`.
-2.  **Predict:** Apply the loaded pipeline's `predict_proba()` method to new, unseen applicant data (after ensuring it has the expected column structure). The output probabilities can then be thresholded using the optimized decision threshold (approximately 0.4994 based on the evaluation aiming for 70% recall).
+A brief overview of the prediction process:
+
+To use the saved pipeline for making predictions on new data, you first need to load the pipeline file using `joblib.load()`. New applicant data needs to be prepared in a pandas DataFrame with the expected columns. This DataFrame is then passed to the loaded pipeline's `.predict_proba()` method to get probability scores. Finally, an optimized decision threshold (determined during model evaluation) is applied to these probabilities to classify applicants as 'Best Match' or 'Not Best Match'.
+
+The `predict.py` script is provided in the notebook as a standalone example of how to load the pipeline and perform inference, including handling command-line input for data files.
 
 ## Engineering Integration Recommendations
 
 For integrating this model into a production ATS (like TalentSol), consider these principles and recommended services:
 
-*   **Start Simple and Iterate:** Begin with a straightforward and lightweight architecture. This is a **key engineering tenet**. For a problem like initial candidate screening, which involves handling a high volume of candidates and prioritizing for high recall, starting simple allows for faster experimentation and testing to quickly determine if the solution is effective before adding complexity. Avoid unnecessary complexity ("bloat") that could negatively impact inference performance or operational costs. Iterate and add complexity only when necessary to meet specific requirements.
+*   **Start Simple and Iterate:** Begin with a straightforward and lightweight architecture. This is a key engineering tenet. For a problem like initial candidate screening, which involves handling a high volume of candidates and prioritizing for high recall, starting simple allows for faster experimentation and testing to quickly determine if the solution is effective before adding complexity. Avoid unnecessary complexity ("bloat") that could negatively impact inference performance or operational costs. Iterate and add complexity only when necessary to meet specific requirements.
 *   **Explainability and Transparency Document:** Create a clear and easy-to-understand document explaining how the model works, its limitations, the data used, and how predictions are made. This document is crucial for users of the system (recruiters, HR personnel) and other stakeholders (business leads, legal) to build trust, ensure fair usage, and understand the model's impact on the hiring process.
 *   **Real-time Data Pipeline:** Implement an efficient pipeline to preprocess new applicant data using the loaded pipeline's transformers. Recommended services for building data pipelines include serverless functions (e.g., Cloud Functions, Lambda), containerization platforms (e.g., Cloud Run, Kubernetes), or batch processing services (e.g., Dataflow, EMR) depending on latency and throughput requirements.
 *   **Data and Model Storage:** Securely store raw data, processed data, and the trained model pipeline. Cloud Object Storage (e.g., Cloud Storage, S3, Blob Storage) is suitable for raw data and model files. Managed databases (e.g., Cloud SQL, RDS, Azure SQL) can store structured applicant data. Consider a Feature Store for managing and serving features consistently.
@@ -100,8 +102,11 @@ For integrating this model into a production ATS (like TalentSol), consider thes
 *   **Security:** Ensure secure handling and storage of sensitive applicant data and the model artifact.
 *   **Versioning:** Use a system for model versioning to manage updates and rollbacks effectively.
 
-## Resume Optimization Tips (Based on TF-IDF Model)
+## Web Framework/API Integration (Conceptual)
 
+Integrating the trained model into a web framework (like Flask or FastAPI) for a prediction API endpoint involves using the core prediction logic within the web application's request handling. The web application would receive new applicant data (e.g., via a JSON payload), load the saved pipeline (ideally once when the application starts for efficiency), prepare the data in a pandas DataFrame, call the `predict_applicant` function (or equivalent logic) with the DataFrame and the optimized threshold, and return the predictions (e.g., as a JSON response). Key considerations for a production deployment include handling multiple requests concurrently, error handling, scaling, and model versioning. This is discussed conceptually in **Section 7.3: Explain Web framework/API integration (Conceptual)** within the main notebook.
+
+## Resume Optimization Tips (Based on TF-IDF Model)
 Based on the selection of the Optimized TF-IDF model as the best performer, here are some tips for job applicants to optimize their resumes/CVs:
 
 *   **Match Keywords from the Job Description:** Since TF-IDF heavily weights terms that are frequent in a document but rare across others, make sure to use keywords and phrases directly from the job description. The model will likely give higher importance to resumes that contain these specific terms.
