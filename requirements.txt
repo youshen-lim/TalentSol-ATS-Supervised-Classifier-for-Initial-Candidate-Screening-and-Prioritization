@@ -1,0 +1,1 @@
+pandas==2.2.2\nnumpy==1.26.4\nscikit-learn==1.6.1\nmatplotlib==3.10.0\nseaborn==0.13.2\njoblib==1.5.1\ngensim==4.3.3\n
